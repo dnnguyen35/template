@@ -1,0 +1,34 @@
+ubuntu@ip-172-31-27-36:~$ cat /etc/nginx/sites-available/phimcuatoi.luontuoivui.xyz
+server {
+    listen 80;
+    server_name phimcuatoi.luontuoivui.xyz;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    server_name phimcuatoi.luontuoivui.xyz;
+
+    location / {
+        proxy_pass http://13.213.55.117:8082;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /api/v1 {
+        proxy_pass http://13.213.55.117:5001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/phimcuatoi.luontuoivui.xyz/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/phimcuatoi.luontuoivui.xyz/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+}
