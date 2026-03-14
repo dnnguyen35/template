@@ -1,0 +1,287 @@
+Install:
+- rvm (https://rvm.io/rvm/install)
+    - Install RVM stable with ruby: \curl -sSL https://get.rvm.io | bash -s stable --ruby
+- zsh, oh-my-zsh, zsh-autosuggestions
+- git cola
+
+- Generate & add SSH key to git:
++ https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent
++ https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account
++ Eg: ssh-keygen -t rsa -b 4096 -C "dnnguyeen2003@gmail.com"
++ /home/nguyenduong/.ssh/nguyen_duong
+
+git clone git@github.com-nguyen_duong:dnnguyen35/ruby-on-rails-blog.git
+
+===
+- Add SSH config: https://viblo.asia/p/cac-buoc-config-can-thiet-de-ssh-tu-local-len-server-3Q75w9LMZWb
++ nano ~/.ssh/config
++ #Default GitHub
+Host github.com
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_rsa
+
+#company github
+Host github-company
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_rsa_company
+===
+git config -l
+git config user.name "Nguyen Duong"
+git config user.email "dnnguyeen2003@gmail.com"
+git config -l 
+
+===
+https://guides.rubyonrails.org/getting_started.html
+
+//////////Fix dropdown boostrap5 not working in rails 7
+in: javascript/application.js
+  import "@hotwired/turbo-rails"
+  import '@popperjs/core'
+  import "controllers"
+  import "bootstrap"
+in: config/importmap.rb
+  pin 'application', preload: true
+  pin '@hotwired/turbo-rails', to: 'turbo.min.js', preload: true
+  pin '@hotwired/stimulus', to: 'stimulus.min.js', preload: true
+  pin '@hotwired/stimulus-loading', to: 'stimulus-loading.js', preload: true
+  pin_all_from 'app/javascript/controllers', under: 'controllers'
+  pin "bootstrap", to: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/     bootstrap.bundle.min.js"
+  pin "@popperjs/core", to: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+  **Adding line 51 and 52 if dropdown not working
+///////////
+https://guides.rubyonrails.org/getting_started.html
+/////////////////////////////////////////////////////////////////////////
+	SET UP FOR DEPLOY MUSIC APP(CI/CD GITHUB ACTIONs)
+	
+Source(root) setup:
+- /frontend: create Dockerfile, nginx.conf
+- /backend: craete Dockerfile
+- craete, set up docker-compose.yml at root
+- create file main.yml(ci/cd pipeline code) in .github(folder)/workflows(folder)/
+
+EC2(Ubuntu 22.04 LTS) set up: 
+- install docker, docker-copose, git
+- clone source by git clone https:... of git repository
+
+Implementation:
+- change .env variables properly such as port, db_url,... 
+- commit change and push on main or create a pull request if change in onthers branchs(not main)
+- git merge to main branch
+- github action will automatively activates ci/cd pipeline in .github/workflows/main,yml
+- config ssl with nginx for reverse proxy: 
+  + install nginx
+  + use sudo cat /etc/nginx/sites-available/default
+  + use sudo (vi or nano) /etc/nginx/sites-available/default to set up dafault nginx for site
+  + Example: 
+	# Cấu hình HTTP chuyển hướng sang HTTPS
+	server {
+	    listen 80;
+	    server_name nhaccuatoi.luontuoivui.xyz;
+	    return 301 https://$host$request_uri;
+	}
+
+	# Cấu hình HTTPS với chứng chỉ SSL
+	server {
+	    server_name nhaccuatoi.luontuoivui.xyz;
+	    
+	    listen 443 ssl; # managed by Certbot(auto added by certbot to sign ssl certificate)
+
+	    ssl_certificate /etc/letsencrypt/live/nhaccuatoi.luontuoivui.xyz/fullchain.pem; 
+	    ssl_certificate_key /etc/letsencrypt/live/nhaccuatoi.luontuoivui.xyz/privkey.pem;
+	    ssl_trusted_certificate /etc/letsencrypt/live/nhaccuatoi.luontuoivui.xyz/chain.pem;
+
+	    location / {
+		proxy_pass http://13.213.55.117:8081;
+		proxy_http_version 1.1;
+		proxy_set_header Upgrade $http_upgrade;
+		proxy_set_header Connection 'upgrade';
+		proxy_set_header Host $host;
+		proxy_cache_bypass $http_upgrade;
+	    }
+
+	    location /api/ {
+		proxy_pass http://13.213.55.117:5000;
+		proxy_http_version 1.1;
+		proxy_set_header Upgrade $http_upgrade;
+		proxy_set_header Connection 'upgrade';
+		proxy_set_header Host $host;
+		proxy_cache_bypass $http_upgrade;
+	    }
+	    location /socket.io/ {
+		proxy_pass http://13.213.55.117:5000;
+		proxy_http_version 1.1;
+		proxy_set_header Upgrade $http_upgrade;
+		proxy_set_header Connection 'upgrade';
+		proxy_set_header Host $host;
+		proxy_cache_bypass $http_upgrade;
+	    }
+	}
+  + Bytheway if wanna config for up to 2 domain , shhould split into two seperate file :
+   ++ sudo nano /etc/nginx/sites-available/domain1:
+	   server {
+	    listen 80;
+	    server_name domain1.com www.domain1.com;
+
+	    root /var/www/domain1;
+	    index index.html index.htm;
+
+	    location / {
+		try_files $uri $uri/ =404;
+	    }
+	}
+    ++ sudo nano /etc/nginx/sites-available/domain2
+	server {
+	    listen 80;
+	    server_name domain2.com www.domain2.com;
+
+	    root /var/www/domain2;
+	    index index.html index.htm;
+
+	    location / {
+		try_files $uri $uri/ =404;
+	    }
+	}
+    ++ after that create a symlink for directly reflecting from /sites-available to /sites-enabled
+	sudo ln -s /etc/nginx/sites-available/domain1 /etc/nginx/sites-enabled/
+	sudo ln -s /etc/nginx/sites-available/domain2 /etc/nginx/sites-enabled/
+   + after all just run: sudo nginx -s reload and enjoy your self
+   + config ssl(optional):
+    ++ sudo apt update
+    ++ sudo apt install certbot python3-certbot-nginx
+    ++ setup  dns for domain to ec2 ip, make sure domain is live
+    ++ sudo certbot --nginx(then give certbot a domain you wanna sign ssl)
+    ++ certbot sign ssl and config in sites-available
+    ++ sudo certbot renew --dry-run(for automatively renew ssl certificate when it's almost expire)
+
+
+/////////////////////////////////////////////////////////////////////////
+	SET UP FOR DEPLOY MOVIE APP(CI/CD GITHUB ACTIONs)
+
+ubuntu@ip-172-31-27-36:~$ cat /etc/nginx/sites-available/phimcuatoi.luontuoivui.xyz
+server {
+    listen 80;
+    server_name phimcuatoi.luontuoivui.xyz;
+    return 301 https://$host$request_uri;  # Chuyển hướng HTTP sang HTTPS
+}
+
+server {
+    server_name phimcuatoi.luontuoivui.xyz;
+
+    location / {
+        proxy_pass http://13.213.55.117:8082;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /api/v1 {
+        proxy_pass http://13.213.55.117:5001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/phimcuatoi.luontuoivui.xyz/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/phimcuatoi.luontuoivui.xyz/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+}
+ubuntu@ip-172-31-27-36:~$
+
+https://drive.google.com/drive/u/9/folders/1KvWjXmvznGRCYVO9Rbr1xJic7CQnFXXe
+
+/////////////////////////////////////////////////////////////////////////
+	SET UP FOR DEPLOY NHACCUANGUYEN(CI/CD GITHUB ACTIONs)
+
+
+server {
+    server_name nhaccuanguyen.luontuoivui.xyz;
+    client_max_body_size 50M;
+
+    set $prerender 0;
+    if ($http_user_agent ~* "googlebot|bingbot|yandex|baiduspider|facebookexternalhit|twitterbot|linkedinbot|embedly|quora link preview|showyoubot|outbrain|pinterest/0.|slackbot|vkShare|W3C_Validator") {
+        set $prerender 1;
+    }
+    if ($args ~ "_escaped_fragment_") {
+        set $prerender 1;
+    }
+
+    location / {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # nếu bot → chuyển internal location
+        error_page 418 = @prerender;
+        if ($prerender = 1) {
+            return 418;
+        }
+
+        proxy_pass http://localhost:3000;
+    }
+
+    location @prerender {
+        proxy_pass https://service.prerender.io$request_uri;
+        proxy_set_header X-Prerender-Token "sKBf2DFuSQqQbFXjUeN2";
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /api/v1/ {
+        limit_req zone=req_limit_per_ip burst=20 nodelay;
+        proxy_pass http://localhost:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /socket.io/ {
+        limit_req zone=req_limit_per_ip burst=20 nodelay;
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    listen [::]:443 ssl ipv6only=on;
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/nhaccuanguyen.luontuoivui.xyz/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/nhaccuanguyen.luontuoivui.xyz/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+}
+
+server {
+    if ($host = nhaccuanguyen.luontuoivui.xyz) {
+        return 301 https://$host$request_uri;
+    }
+
+    listen 80;
+    listen [::]:80;
+    server_name nhaccuanguyen.luontuoivui.xyz;
+    return 404;
+}
+
+
+
+
+ 
+
+
+
+
